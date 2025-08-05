@@ -12,7 +12,7 @@ import re
 import json
 
 # Define the URL of the site you want to analyze
-TARGET_URL = "https://edwarddonner.com/"
+TARGET_URL = "https://example.com/"
 
 # Alternative between OpenAI and Gemini
 LLM_PROVIDER = 'gemini'  # or 'openai'
