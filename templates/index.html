@@ -557,7 +557,7 @@
         /* Workflow Steps */
         .workflow {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             margin: 25px 0;
         }
@@ -636,7 +636,7 @@
         /* Use Cases */
         .use-cases {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             margin: 25px 0;
         }
@@ -763,7 +763,11 @@
                 font-size: 1.2rem;
             }
 
-            .workflow, .tech-grid, .use-cases {
+            .workflow, .use-cases {
+                grid-template-columns: 1fr;
+            }
+            
+            .tech-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -1010,7 +1014,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
-            <p>Created by <a href="https://www.linkedin.com/in/alexandre-guimenti/" target="_blank" rel="noopener noreferrer">Alexandre Guimenti</a></p>
+            <p>Created by <a href="https://www.linkedin.com/in/alexandre-guimenti/" target="_blank" rel="noopener noreferrer">Alexandre Guimenti</a> | <a href="https://github.com/alexguimenti/market-insight-crawler" target="_blank" rel="noopener noreferrer">GitHub</a></p>
         </div>
     </footer>
 
