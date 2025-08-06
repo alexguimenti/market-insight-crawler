@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Market Insight Crawler</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -121,18 +122,123 @@
 
         .loading {
             display: none;
-            text-align: center;
             margin: 20px 0;
         }
 
-        .spinner {
-            display: inline-block;
+        .status-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .status-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .status-icon {
+            font-size: 1.5rem;
+            margin-right: 12px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .progress-steps {
+            margin-bottom: 25px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .step-item.active {
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .step-item.completed {
+            background: rgba(56, 161, 105, 0.1);
+            border-left: 3px solid #38a169;
+            padding-left: 15px;
+        }
+
+        .step-icon {
+            font-size: 1.2rem;
+            margin-right: 15px;
             width: 30px;
-            height: 30px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
+            text-align: center;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+
+        .step-description {
+            color: #718096;
+            font-size: 0.85rem;
+        }
+
+        .step-status {
+            font-size: 1rem;
+            margin-left: 10px;
+        }
+
+        .step-item.active .step-status {
             animation: spin 1s linear infinite;
+        }
+
+        .step-item.completed .step-status {
+            color: #38a169;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .current-status {
+            text-align: center;
+            color: #4a5568;
+            font-size: 0.9rem;
+            font-style: italic;
+            margin-top: 15px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
 
         @keyframes spin {
@@ -152,10 +258,173 @@
             border-left: 4px solid #667eea;
             max-height: 500px;
             overflow-y: auto;
-            white-space: pre-wrap;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 0.95rem;
             line-height: 1.6;
+            color: #2d3748;
+        }
+
+        /* Markdown Styling */
+        .result-content h1,
+        .result-content h2,
+        .result-content h3,
+        .result-content h4 {
+            color: #2d3748;
+            margin: 1.5rem 0 1rem 0;
+            font-weight: 600;
+        }
+
+        .result-content h1 {
+            font-size: 1.8rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .result-content h2 {
+            font-size: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 0.3rem;
+        }
+
+        .result-content h3 {
+            font-size: 1.3rem;
+        }
+
+        .result-content h4 {
+            font-size: 1.1rem;
+        }
+
+        .result-content p {
+            margin: 0.8rem 0;
+            color: #4a5568;
+        }
+
+        .result-content ul,
+        .result-content ol {
+            margin: 1rem 0;
+            padding-left: 1.5rem;
+        }
+
+        .result-content li {
+            margin: 0.5rem 0;
+            color: #4a5568;
+        }
+
+        .result-content strong {
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .result-content em {
+            color: #718096;
+            font-style: italic;
+        }
+
+        .result-content code {
+            background: #edf2f7;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #e53e3e;
+        }
+
+        .result-content pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .result-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .result-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .result-content hr {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 2rem 0;
+        }
+
+        .result-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .result-content th,
+        .result-content td {
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem;
+            text-align: left;
+        }
+
+        .result-content th {
+            background: #f7fafc;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        /* Additional Markdown Enhancements */
+        .result-content ul li::marker {
+            color: #667eea;
+        }
+
+        .result-content ol li::marker {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .result-content ul ul,
+        .result-content ol ol {
+            margin: 0.5rem 0;
+        }
+
+        .result-content ul ul li::marker {
+            color: #718096;
+        }
+
+        .result-content ol ol li::marker {
+            color: #718096;
+        }
+
+        /* Highlight important information */
+        .result-content strong {
+            background: linear-gradient(120deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);
+            background-repeat: no-repeat;
+            background-size: 100% 0.2em;
+            background-position: 0 88%;
+            transition: background-size 0.25s ease-in;
+        }
+
+        .result-content strong:hover {
+            background-size: 100% 100%;
+        }
+
+        /* Company name highlighting */
+        .result-content h2:first-of-type {
+            color: #667eea;
+            font-size: 1.6rem;
+            margin-top: 0;
+        }
+
+        /* Section dividers */
+        .result-content h3 {
+            border-left: 3px solid #667eea;
+            padding-left: 1rem;
+            margin-left: -1rem;
         }
 
         .error {
@@ -194,58 +463,88 @@
             margin-top: 10px;
         }
 
-        /* Navigation Tabs */
-        .nav-tabs {
+        /* Header Container */
+        .header-container {
             display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
             margin-bottom: 30px;
-            border-bottom: 2px solid #e2e8f0;
         }
 
-        .tab-btn {
-            background: none;
+        .header-content {
+            flex: 1;
+        }
+
+        .about-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
             border: none;
-            padding: 15px 25px;
-            font-size: 1rem;
-            font-weight: 600;
-            color: #718096;
+            padding: 12px 24px;
             cursor: pointer;
+            border-radius: 25px;
             transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
+            margin-left: 15px;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
-        .tab-btn.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+        .about-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
         }
 
-        .tab-btn:hover {
-            color: #667eea;
-        }
-
-        /* Tab Content */
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
+        /* Main Content */
+        .main-content {
             display: block;
+        }
+
+        /* Tool Description */
+        .tool-description {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+
+        .tool-description p {
+            color: #4a5568;
+            font-size: 1rem;
+            line-height: 1.6;
+            margin: 0;
+            text-align: center;
+        }
+
+        /* About Section */
+        .about-section {
+            display: none;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .about-section.active {
+            display: block;
+        }
+
+        .about-section h2 {
+            color: #2d3748;
+            margin-bottom: 25px;
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        .about-section h3 {
+            color: #4a5568;
+            margin: 35px 0 20px 0;
+            font-size: 1.4rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
         }
 
         /* About Content */
         .about-content {
             max-width: 100%;
-        }
-
-        .about-content h2 {
-            color: #2d3748;
-            margin-bottom: 20px;
-            font-size: 1.8rem;
-        }
-
-        .about-content h3 {
-            color: #4a5568;
-            margin: 30px 0 20px 0;
-            font-size: 1.4rem;
         }
 
         .about-description {
@@ -444,34 +743,85 @@
                 font-size: 1rem;
             }
 
-            .nav-tabs {
+            .header-container {
                 flex-direction: column;
+                align-items: center;
+                text-align: center;
             }
 
-            .tab-btn {
-                text-align: center;
-                border-bottom: 1px solid #e2e8f0;
+            .about-btn {
+                margin: 15px 0 0 0;
+                padding: 10px 20px;
+                font-size: 0.8rem;
+            }
+
+            .about-section h2 {
+                font-size: 1.6rem;
+            }
+
+            .about-section h3 {
+                font-size: 1.2rem;
             }
 
             .workflow, .tech-grid, .use-cases {
                 grid-template-columns: 1fr;
+            }
+
+            /* Mobile adjustments */
+            .tool-description {
+                padding: 15px;
+                margin-bottom: 20px;
+            }
+
+            .tool-description p {
+                font-size: 0.9rem;
+            }
+
+            /* Mobile Markdown adjustments */
+            .result-content {
+                font-size: 0.9rem;
+                padding: 20px;
+            }
+
+            .result-content h1 {
+                font-size: 1.5rem;
+            }
+
+            .result-content h2 {
+                font-size: 1.3rem;
+            }
+
+            .result-content h3 {
+                font-size: 1.1rem;
+            }
+
+            .result-content pre {
+                font-size: 0.8rem;
+                padding: 0.8rem;
+            }
+
+            .result-content table {
+                font-size: 0.85rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🔍 Market Insight Crawler</h1>
-        <p class="subtitle">Intelligent website analysis with AI</p>
-        
-        <!-- Navigation Tabs -->
-        <div class="nav-tabs">
-            <button class="tab-btn active" data-tab="analyzer">Analyzer</button>
-            <button class="tab-btn" data-tab="about">About</button>
+        <div class="header-container">
+            <div class="header-content">
+                <h1>🔍 Market Insight Crawler</h1>
+                <p class="subtitle">Intelligent website analysis with AI</p>
+            </div>
+            <button class="about-btn" data-tab="about">About</button>
         </div>
 
-        <!-- Analyzer Tab -->
-        <div class="tab-content active" id="analyzer-tab">
+        <!-- Main Content -->
+        <div class="main-content" id="main-content">
+            <div class="tool-description">
+                <p>This AI-powered tool analyzes any website and generates comprehensive business intelligence reports. Simply enter a URL and get detailed insights about the company's mission, products, market positioning, and commercial opportunities.</p>
+            </div>
+            
             <form id="analyzeForm">
                 <div class="form-group">
                     <div class="input-group">
@@ -492,25 +842,70 @@
             </form>
 
             <div class="loading" id="loading">
-                <div class="spinner"></div>
-                <p>Analyzing website...</p>
+                <div class="status-container">
+                    <div class="status-header">
+                        <div class="status-icon">⏳</div>
+                        <div class="status-title">Analysis in Progress</div>
+                    </div>
+                    
+                    <div class="progress-steps">
+                        <div class="step-item" data-step="scraping">
+                            <div class="step-icon">🌐</div>
+                            <div class="step-content">
+                                <div class="step-title">Web Scraping</div>
+                                <div class="step-description">Extracting content and links...</div>
+                            </div>
+                            <div class="step-status">⏳</div>
+                        </div>
+                        
+                        <div class="step-item" data-step="classification">
+                            <div class="step-icon">🧠</div>
+                            <div class="step-content">
+                                <div class="step-title">Link Classification</div>
+                                <div class="step-description">Analyzing relevant pages...</div>
+                            </div>
+                            <div class="step-status">⏸️</div>
+                        </div>
+                        
+                        <div class="step-item" data-step="aggregation">
+                            <div class="step-icon">📄</div>
+                            <div class="step-content">
+                                <div class="step-title">Content Aggregation</div>
+                                <div class="step-description">Collecting page content...</div>
+                            </div>
+                            <div class="step-status">⏸️</div>
+                        </div>
+                        
+                        <div class="step-item" data-step="summary">
+                            <div class="step-icon">📊</div>
+                            <div class="step-content">
+                                <div class="step-title">Business Summary</div>
+                                <div class="step-description">Generating analysis...</div>
+                            </div>
+                            <div class="step-status">⏸️</div>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    
+                    <div class="current-status" id="currentStatus">
+                        Starting analysis...
+                    </div>
+                </div>
             </div>
-
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-
-            <div class="status-text" id="statusText"></div>
 
             <div class="result-container" id="resultContainer">
                 <div class="result-content" id="resultContent"></div>
             </div>
         </div>
 
-        <!-- About Tab -->
-        <div class="tab-content" id="about-tab">
+        <!-- About Section -->
+        <div class="about-section" id="about-section">
             <div class="about-content">
                 <h2>🤖 About This Project</h2>
+                
                 <p class="about-description">
                     Market Insight Crawler is a Python-based tool that simulates AI agent behavior using simple LLM calls, 
                     without complex frameworks like LangChain or AutoGen. It demonstrates how thoughtful prompt design and 
@@ -608,6 +1003,8 @@
                 </div>
             </div>
         </div>
+
+
     </div>
 
     <!-- Footer -->
@@ -639,8 +1036,13 @@
             analyzeBtn.textContent = '⏳ Analyzing...';
             loading.style.display = 'block';
             resultContainer.style.display = 'none';
-            progressBar.style.display = 'block';
-            statusText.textContent = 'Starting analysis...';
+            
+            // Initialize progress
+            updateProgress('scraping', 'active');
+            updateCurrentStatus('Initializing web scraping...');
+            
+            // Start progress simulation
+            const progressInterval = simulateProgress();
 
             try {
                 const response = await fetch('/analyze_stream', {
@@ -678,7 +1080,17 @@
                                 
                                 if (data.result) {
                                     result = data.result;
-                                    showResult(result);
+                                    // Mark all steps as completed
+                                    updateProgress('scraping', 'completed');
+                                    updateProgress('classification', 'completed');
+                                    updateProgress('aggregation', 'completed');
+                                    updateProgress('summary', 'completed');
+                                    updateProgressFill(100);
+                                    updateCurrentStatus('Analysis completed!');
+                                    
+                                    setTimeout(() => {
+                                        showResult(result);
+                                    }, 500);
                                     return;
                                 }
                             } catch (e) {
@@ -691,19 +1103,91 @@
             } catch (error) {
                 showError('Error connecting to server: ' + error.message);
             } finally {
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                }
                 resetUI();
             }
         });
 
+        // Progress control functions
+        function updateProgress(step, status) {
+            const stepElement = document.querySelector(`[data-step="${step}"]`);
+            if (stepElement) {
+                stepElement.className = `step-item ${status}`;
+                const statusElement = stepElement.querySelector('.step-status');
+                
+                if (status === 'active') {
+                    statusElement.textContent = '⏳';
+                } else if (status === 'completed') {
+                    statusElement.textContent = '✅';
+                } else {
+                    statusElement.textContent = '⏸️';
+                }
+            }
+        }
+
+        function updateProgressFill(percentage) {
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        function updateCurrentStatus(message) {
+            const currentStatus = document.getElementById('currentStatus');
+            currentStatus.textContent = message;
+        }
+
+        // Simulate progress for better UX
+        function simulateProgress() {
+            let currentStep = 0;
+            const steps = ['scraping', 'classification', 'aggregation', 'summary'];
+            const messages = [
+                'Extracting content and links from website...',
+                'Analyzing and classifying relevant pages...',
+                'Collecting and processing page content...',
+                'Generating business intelligence summary...'
+            ];
+
+            const interval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    // Complete previous step
+                    if (currentStep > 0) {
+                        updateProgress(steps[currentStep - 1], 'completed');
+                    }
+                    
+                    // Activate current step
+                    updateProgress(steps[currentStep], 'active');
+                    updateCurrentStatus(messages[currentStep]);
+                    updateProgressFill((currentStep + 1) * 25);
+                    
+                    currentStep++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 2000); // Change step every 2 seconds
+
+            return interval;
+        }
+
         function showResult(content) {
-            resultContent.textContent = content;
+            // Configure marked options for better rendering
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: false,
+                mangle: false
+            });
+            
+            // Render markdown to HTML
+            const htmlContent = marked.parse(content);
+            resultContent.innerHTML = htmlContent;
             resultContent.className = 'result-content success';
             resultContainer.style.display = 'block';
             statusText.textContent = 'Analysis completed successfully!';
         }
 
         function showError(message) {
-            resultContent.textContent = 'Error: ' + message;
+            resultContent.innerHTML = '<strong>Error:</strong> ' + message;
             resultContent.className = 'result-content error';
             resultContainer.style.display = 'block';
             statusText.textContent = 'Analysis error';
@@ -713,25 +1197,35 @@
             analyzeBtn.disabled = false;
             analyzeBtn.textContent = '🚀 Analyze Website';
             loading.style.display = 'none';
-            progressBar.style.display = 'none';
+            
+            // Reset all progress steps
+            const steps = ['scraping', 'classification', 'aggregation', 'summary'];
+            steps.forEach(step => {
+                updateProgress(step, '');
+            });
+            
+            // Reset progress bar
+            updateProgressFill(0);
+            updateCurrentStatus('');
         }
 
-        // Tab functionality
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
+        // About section functionality
+        const aboutBtn = document.querySelector('.about-btn');
+        const aboutSection = document.getElementById('about-section');
+        const mainContent = document.getElementById('main-content');
 
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetTab = btn.getAttribute('data-tab');
-                
-                // Remove active class from all buttons and contents
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                
-                // Add active class to clicked button and corresponding content
-                btn.classList.add('active');
-                document.getElementById(targetTab + '-tab').classList.add('active');
-            });
+        aboutBtn.addEventListener('click', () => {
+            if (aboutSection.classList.contains('active')) {
+                // Hide about section
+                aboutSection.classList.remove('active');
+                aboutBtn.textContent = 'About';
+                mainContent.style.display = 'block';
+            } else {
+                // Show about section
+                aboutSection.classList.add('active');
+                aboutBtn.textContent = 'Back to Tool';
+                mainContent.style.display = 'none';
+            }
         });
 
         // Auto-focus on input
