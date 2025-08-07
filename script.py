@@ -26,6 +26,7 @@ LLM_PROVIDER = 'gemini'  # or 'openai'
 REQUEST_TIMEOUT = 30  # seconds
 MAX_CONTENT_SIZE = 50000  # characters per page
 MAX_PAGES_TO_SCRAPE = 10  # limit number of pages
+MAX_LINKS_TO_ANALYZE = 50  # limit links sent to LLM
 
 # Load API keys
 load_dotenv()
@@ -110,9 +111,9 @@ class WebScraper:
 def analyze_links_with_openai(links, site_domain):
     try:
         # Limit number of links to analyze
-        if len(links) > 50:
-            logger.warning(f"Too many links ({len(links)}), limiting to 50")
-            links = links[:50]
+        if len(links) > MAX_LINKS_TO_ANALYZE:
+            logger.warning(f"Too many links ({len(links)}), limiting to {MAX_LINKS_TO_ANALYZE}")
+            links = links[:MAX_LINKS_TO_ANALYZE]
         
         system_prompt = """
 You are an LLM specialized in URL analysis. You will receive a list of links extracted from a website's homepage. Your task is to classify each link as Relevant or Not Relevant based only on the URL structure, without accessing the actual content of the pages.
@@ -233,8 +234,20 @@ def get_full_content_from_site(url):
 # === MARKDOWN SUMMARY ===
 def summarize_company_from_site(url):
     try:
+        # Check API keys
+        if LLM_PROVIDER == 'openai' and not openai_api_key:
+            print("## Error: Missing OpenAI API Key\n\nPlease set the OPENAI_API_KEY environment variable.")
+            return
+        elif LLM_PROVIDER == 'gemini' and not gemini_api_key:
+            print("## Error: Missing Gemini API Key\n\nPlease set the GEMINI_API_KEY environment variable.")
+            return
+            
         MAX_CHARS_PER_PAGE = 2000
         content_data = get_full_content_from_site(url)
+        
+        # Add memory management
+        import gc
+        gc.collect()
         
         # Check if we have any content to analyze
         if not content_data:
@@ -268,30 +281,40 @@ Do not speculate beyond what is supported by the content. If some information is
                 user_prompt += f"URL: {entry['url']}\nCONTENT:\n{truncated}\n\n"
 
         if LLM_PROVIDER == 'openai':
-            client = openai.OpenAI()
-            stream = client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.3,
-                stream=True,
-                timeout=120  # 2 minutes timeout for streaming
-            )
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    print(chunk.choices[0].delta.content, end="", flush=True)
+            try:
+                client = openai.OpenAI()
+                stream = client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.3,
+                    stream=True,
+                    timeout=120  # 2 minutes timeout for streaming
+                )
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        print(chunk.choices[0].delta.content, end="", flush=True)
+            except Exception as e:
+                logger.error(f"OpenAI API error: {e}")
+                print(f"## Error: OpenAI API Error\n\nFailed to generate analysis: {str(e)}")
+                return
 
         elif LLM_PROVIDER == 'gemini':
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(
-                f"System: {system_prompt}\n\nUser: {user_prompt}",
-                stream=True
-            )
-            for chunk in response:
-                if chunk.text:
-                    print(chunk.text, end="", flush=True)
+            try:
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                response = model.generate_content(
+                    f"System: {system_prompt}\n\nUser: {user_prompt}",
+                    stream=True
+                )
+                for chunk in response:
+                    if chunk.text:
+                        print(chunk.text, end="", flush=True)
+            except Exception as e:
+                logger.error(f"Gemini API error: {e}")
+                print(f"## Error: Gemini API Error\n\nFailed to generate analysis: {str(e)}")
+                return
     
     except Exception as e:
         print(f"## Error: Analysis Failed\n\nAn error occurred during the analysis: {str(e)}\n\nPlease check the URL and try again.")

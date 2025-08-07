@@ -13,15 +13,15 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(__file__))
 
 from app import app
-from config import current_config
 
 # Configure the app for production
-app.config.from_object(current_config)
+app.config['DEBUG'] = False
+app.config['TESTING'] = False
 
 if __name__ == "__main__":
     app.run(
-        host=current_config.HOST,
-        port=current_config.PORT,
-        debug=current_config.DEBUG,
-        threaded=current_config.THREADED if hasattr(current_config, 'THREADED') else False
+        host='0.0.0.0',
+        port=int(os.getenv('PORT', 5000)),
+        debug=False,
+        threaded=True
     )

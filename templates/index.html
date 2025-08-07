@@ -1148,7 +1148,7 @@
         const downloadTxtBtn = document.getElementById('downloadTxtBtn');
         const progressBar = document.getElementById('progressBar');
         const progressFill = document.getElementById('progressFill');
-        const statusText = document.getElementById('statusText');
+        const currentStatus = document.getElementById('currentStatus');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -1310,14 +1310,14 @@
             resultContent.className = 'result-content success';
             resultContainer.style.display = 'block';
             downloadSection.style.display = 'block';
-            statusText.textContent = 'Analysis completed successfully!';
+            currentStatus.textContent = 'Analysis completed successfully!';
         }
 
         function showError(message) {
             resultContent.innerHTML = '<strong>Error:</strong> ' + message;
             resultContent.className = 'result-content error';
             resultContainer.style.display = 'block';
-            statusText.textContent = 'Analysis error';
+            currentStatus.textContent = 'Analysis error';
         }
 
         function resetUI() {

@@ -22,6 +22,12 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
+# Global error handler
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.exception("Unhandled exception:")
+    return jsonify({'error': 'Internal server error'}), 500
+
 # Production settings
 REQUEST_TIMEOUT = 300  # 5 minutes total timeout
 ANALYSIS_TIMEOUT = 240  # 4 minutes for analysis
@@ -39,6 +45,31 @@ def index():
 @app.route('/test')
 def test():
     return render_template('test_frontend.html')
+
+@app.route('/health')
+def health():
+    """Health check endpoint for debugging"""
+    import os
+    return jsonify({
+        'status': 'ok',
+        'openai_key': 'set' if os.getenv('OPENAI_API_KEY') else 'missing',
+        'gemini_key': 'set' if os.getenv('GEMINI_API_KEY') else 'missing',
+        'llm_provider': LLM_PROVIDER
+    })
+
+@app.route('/test_simple')
+def test_simple():
+    """Simple test endpoint that doesn't require external APIs"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Server is responding correctly',
+        'timestamp': time.time()
+    })
+
+@app.route('/debug')
+def debug():
+    """Debug page for testing endpoints"""
+    return render_template('debug.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -76,6 +107,23 @@ def analyze_stream():
     # Validate URL
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
+
+    logger.info(f"Starting analysis for validated URL: {url}")
+    
+    # Add memory management
+    import gc
+    gc.collect()
+    
+    # Check available memory (simple check)
+    try:
+        import psutil
+        memory = psutil.virtual_memory()
+        if memory.percent > 90:
+            logger.warning(f"High memory usage: {memory.percent}%")
+            return jsonify({'error': 'Server is under high load. Please try again later.'}), 503
+    except ImportError:
+        # psutil not available, skip memory check
+        pass
 
     try:
         from io import StringIO
@@ -141,6 +189,14 @@ def analyze_stream():
     except Exception as e:
         logger.exception("Unexpected error in analyze_stream:")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+    except KeyboardInterrupt:
+        logger.warning("Analysis interrupted by user")
+        return jsonify({'error': 'Analysis was interrupted'}), 500
+
+    except SystemExit:
+        logger.warning("System exit requested")
+        return jsonify({'error': 'System exit requested'}), 500
 
 if __name__ == '__main__':
     # Production settings
