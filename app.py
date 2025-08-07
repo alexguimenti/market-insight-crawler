@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, Response, stream_template
+from flask_cors import CORS
 import os
 import sys
 from dotenv import load_dotenv
@@ -19,6 +20,7 @@ from script import WebScraper, get_relevant_links_from_url, get_full_content_fro
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Production settings
 REQUEST_TIMEOUT = 300  # 5 minutes total timeout
@@ -33,6 +35,10 @@ result_queue = queue.Queue()
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/test')
+def test():
+    return render_template('test_frontend.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():

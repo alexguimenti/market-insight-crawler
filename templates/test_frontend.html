@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend</title>
+</head>
+<body>
+    <h1>Test Frontend</h1>
+    <input type="text" id="urlInput" placeholder="Enter URL" value="https://httpbin.org">
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const url = document.getElementById('urlInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                console.log('Sending request to:', '/analyze_stream');
+                console.log('Request data:', { url: url });
+                
+                const response = await fetch('/analyze_stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Server error:', response.status, errorText);
+                    resultDiv.innerHTML = `Error: ${response.status} - ${errorText}`;
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('Response data:', data);
+
+                if (data.error) {
+                    console.error('API error:', data.error);
+                    resultDiv.innerHTML = `API Error: ${data.error}`;
+                    return;
+                }
+
+                if (data.result) {
+                    resultDiv.innerHTML = `<h3>Success!</h3><pre>${data.result.substring(0, 500)}...</pre>`;
+                } else {
+                    resultDiv.innerHTML = 'No result or error in response';
+                }
+
+            } catch (error) {
+                console.error('Fetch error:', error);
+                resultDiv.innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

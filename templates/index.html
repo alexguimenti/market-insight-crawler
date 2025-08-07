@@ -1166,42 +1166,61 @@
             const progressInterval = simulateProgress();
 
             try {
+                console.log('Sending request to:', '/analyze_stream');
+                console.log('Request data:', { url: url });
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
+                
                 const response = await fetch('/analyze_stream', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ url: url })
+                    body: JSON.stringify({ url: url }),
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
 
                 if (!response.ok) {
-                    throw new Error('Erro na requisição');
+git stat                    const errorText = await response.text();
+                    console.error('Server error:', response.status, errorText);
+                    throw new Error(`Server error: ${response.status} - ${errorText}`);
                 }
 
                 const data = await response.json();
+                console.log('Response data:', data);
 
-if (data.error) {
-    showError(data.error);
-    return;
-}
+                if (data.error) {
+                    console.error('API error:', data.error);
+                    showError(data.error);
+                    return;
+                }
 
-if (data.result) {
-    // Marcar como completo
-    updateProgress('scraping', 'completed');
-    updateProgress('classification', 'completed');
-    updateProgress('aggregation', 'completed');
-    updateProgress('summary', 'completed');
-    updateProgressFill(100);
-    updateCurrentStatus('Analysis completed!');
+                if (data.result) {
+                    // Marcar como completo
+                    updateProgress('scraping', 'completed');
+                    updateProgress('classification', 'completed');
+                    updateProgress('aggregation', 'completed');
+                    updateProgress('summary', 'completed');
+                    updateProgressFill(100);
+                    updateCurrentStatus('Analysis completed!');
 
-    setTimeout(() => {
-        showResult(data.result);
-    }, 500);
-}
-
+                    setTimeout(() => {
+                        showResult(data.result);
+                    }, 500);
+                } else {
+                    throw new Error('No result or error in response');
+                }
 
             } catch (error) {
-                showError('Error connecting to server: ' + error.message);
+                console.error('Fetch error:', error);
+                if (error.name === 'AbortError') {
+                    showError('Request timed out. The analysis is taking too long. Please try a smaller website.');
+                } else {
+                    showError('Error connecting to server: ' + error.message);
+                }
             } finally {
                 if (progressInterval) {
                     clearInterval(progressInterval);
