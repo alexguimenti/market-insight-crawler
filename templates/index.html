@@ -32,6 +32,9 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style>
         * {
             margin: 0;
@@ -1132,6 +1135,7 @@
     </footer>
 
     <script>
+        // Version: 1.1 - Fixed syntax error
         const form = document.getElementById('analyzeForm');
         const urlInput = document.getElementById('urlInput');
         const analyzeBtn = document.getElementById('analyzeBtn');
@@ -1184,7 +1188,7 @@
                 clearTimeout(timeoutId);
 
                 if (!response.ok) {
-git stat                    const errorText = await response.text();
+                    const errorText = await response.text();
                     console.error('Server error:', response.status, errorText);
                     throw new Error(`Server error: ${response.status} - ${errorText}`);
                 }
