@@ -6,6 +6,8 @@ import threading
 import queue
 import time
 import json
+import logging
+logging.basicConfig(level=logging.INFO)
 
 # Import functions from script.py
 from script import WebScraper, get_relevant_links_from_url, get_full_content_from_site, summarize_company_from_site
@@ -52,7 +54,10 @@ def analyze():
 @app.route('/analyze_stream', methods=['POST'])
 def analyze_stream():
     url = request.json.get('url')
+    logging.info(f"Received URL: {url}")
+
     if not url:
+        logging.warning("URL is missing in request.")
         return jsonify({'error': 'URL is required'}), 400
 
     try:
@@ -63,14 +68,19 @@ def analyze_stream():
         sys.stdout = mystdout = StringIO()
 
         try:
+            logging.info("Starting analysis with summarize_company_from_site...")
             summarize_company_from_site(url)
+            logging.info("Analysis completed.")
         finally:
             sys.stdout = old_stdout
 
         output = mystdout.getvalue()
+        logging.info(f"Output: {output[:300]}...")  # log só os primeiros 300 chars
+
         return jsonify({'result': output})
 
     except Exception as e:
+        logging.exception("Error during analysis:")
         return jsonify({'error': str(e)}), 500
 
 #if __name__ == '__main__':
