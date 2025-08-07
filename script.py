@@ -10,12 +10,22 @@ import openai
 import google.generativeai as genai
 import re
 import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define the URL of the site you want to analyze
 TARGET_URL = "https://example.com/"
 
 # Alternative between OpenAI and Gemini
 LLM_PROVIDER = 'gemini'  # or 'openai'
+
+# Production settings
+REQUEST_TIMEOUT = 30  # seconds
+MAX_CONTENT_SIZE = 50000  # characters per page
+MAX_PAGES_TO_SCRAPE = 10  # limit number of pages
 
 # Load API keys
 load_dotenv()
@@ -40,12 +50,36 @@ class WebScraper:
 
     def fetch_and_parse(self):
         try:
-            response = requests.get(self.url)
+            # Add headers to mimic real browser
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            response = requests.get(
+                self.url, 
+                timeout=REQUEST_TIMEOUT,
+                headers=headers,
+                allow_redirects=True
+            )
             response.raise_for_status()
+            
+            # Check content size
+            if len(response.text) > MAX_CONTENT_SIZE:
+                logger.warning(f"Content too large for {self.url}: {len(response.text)} chars")
+                response.text = response.text[:MAX_CONTENT_SIZE]
+            
             self.soup = BeautifulSoup(response.text, 'html.parser')
             self.extract_content()
+            
+        except requests.Timeout:
+            logger.error(f"Timeout fetching {self.url}")
+            self.full_content = f"Title: Timeout Error\n\nText: Request timed out after {REQUEST_TIMEOUT} seconds\n\nLinks: []\n\nImages: []"
         except requests.RequestException as e:
-            print(f"Error fetching {self.url}: {e}")
+            logger.error(f"Error fetching {self.url}: {e}")
+            self.full_content = f"Title: Network Error\n\nText: Unable to fetch content: {str(e)}\n\nLinks: []\n\nImages: []"
+        except Exception as e:
+            logger.error(f"Unexpected error fetching {self.url}: {e}")
+            self.full_content = f"Title: Error\n\nText: Unexpected error: {str(e)}\n\nLinks: []\n\nImages: []"
 
     def extract_content(self):
         if not self.soup:
@@ -54,6 +88,11 @@ class WebScraper:
         try:
             self.title = self.soup.title.string.strip() if self.soup.title else "No title found"
             self.text = self.soup.get_text(separator=' ', strip=True)
+            
+            # Limit text size
+            if len(self.text) > MAX_CONTENT_SIZE:
+                self.text = self.text[:MAX_CONTENT_SIZE] + "... [truncated]"
+            
             self.links = [urljoin(self.url, a['href']) for a in self.soup.find_all('a', href=True)]
             self.images = [urljoin(self.url, img['src']) for img in self.soup.find_all('img', src=True)]
             
@@ -62,13 +101,18 @@ class WebScraper:
             else:
                 self.full_content = f"Title: {self.title}\n\nText: No readable content found\n\nLinks: {self.links}\n\nImages: {self.images}"
         except Exception as e:
-            print(f"Error extracting content from {self.url}: {e}")
+            logger.error(f"Error extracting content from {self.url}: {e}")
             self.full_content = f"Title: Error extracting content\n\nText: Unable to extract content from this page\n\nLinks: []\n\nImages: []"
 
 
 # === LINK CLASSIFICATION ===
 def analyze_links_with_openai(links, site_domain):
     try:
+        # Limit number of links to analyze
+        if len(links) > 50:
+            logger.warning(f"Too many links ({len(links)}), limiting to 50")
+            links = links[:50]
+        
         system_prompt = """
 You are an LLM specialized in URL analysis. You will receive a list of links extracted from a website's homepage. Your task is to classify each link as Relevant or Not Relevant based only on the URL structure, without accessing the actual content of the pages.
 
@@ -95,7 +139,8 @@ Respond with only the JSON, without any additional explanation or formatting.
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.2
+                temperature=0.2,
+                timeout=60  # Add timeout for API calls
             )
             return response.choices[0].message.content
 
@@ -105,7 +150,7 @@ Respond with only the JSON, without any additional explanation or formatting.
             response = chat.send_message(f"System: {system_prompt}\n\nUser: {user_prompt}")
             return response.text
     except Exception as e:
-        print(f"Error analyzing links: {e}")
+        logger.error(f"Error analyzing links: {e}")
         return "[]"
 
 
@@ -154,9 +199,14 @@ def get_relevant_links_from_url(url):
                     seen.add(cleaned_link)
                     filtered_links.append(cleaned_link)
 
+        # Limit number of pages to scrape
+        if len(filtered_links) > MAX_PAGES_TO_SCRAPE:
+            logger.warning(f"Too many relevant links ({len(filtered_links)}), limiting to {MAX_PAGES_TO_SCRAPE}")
+            filtered_links = filtered_links[:MAX_PAGES_TO_SCRAPE]
+
         return filtered_links
     except Exception as e:
-        print(f"Error getting relevant links from {url}: {e}")
+        logger.error(f"Error getting relevant links from {url}: {e}")
         return []
 
 
@@ -174,7 +224,7 @@ def get_full_content_from_site(url):
             if page_scraper.full_content:
                 contents.append({"url": link, "content": page_scraper.full_content})
         except Exception as e:
-            print(f"Error scraping {link}: {e}")
+            logger.error(f"Error scraping {link}: {e}")
     
     return contents
 
@@ -225,7 +275,8 @@ Do not speculate beyond what is supported by the content. If some information is
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,
-                stream=True
+                stream=True,
+                timeout=120  # 2 minutes timeout for streaming
             )
             for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta.content:
@@ -243,7 +294,6 @@ Do not speculate beyond what is supported by the content. If some information is
     
     except Exception as e:
         print(f"## Error: Analysis Failed\n\nAn error occurred during the analysis: {str(e)}\n\nPlease check the URL and try again.")
-
 
 
 # === FINAL EXECUTION ===
