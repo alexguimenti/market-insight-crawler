@@ -63,12 +63,13 @@ class WebScraper:
             )
             response.raise_for_status()
             
-            # Check content size
-            if len(response.text) > MAX_CONTENT_SIZE:
-                logger.warning(f"Content too large for {self.url}: {len(response.text)} chars")
-                response.text = response.text[:MAX_CONTENT_SIZE]
+            # Get content and check size
+            content = response.text
+            if len(content) > MAX_CONTENT_SIZE:
+                logger.warning(f"Content too large for {self.url}: {len(content)} chars")
+                content = content[:MAX_CONTENT_SIZE]
             
-            self.soup = BeautifulSoup(response.text, 'html.parser')
+            self.soup = BeautifulSoup(content, 'html.parser')
             self.extract_content()
             
         except requests.Timeout:

@@ -74,23 +74,47 @@ def analyze_stream():
     try:
         from io import StringIO
         import sys
-        import signal
+        import threading
+        import time
 
-        # Set up timeout handler
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Analysis timed out")
-
-        # Set timeout for the entire analysis
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(ANALYSIS_TIMEOUT)
+        # Timeout implementation for Windows compatibility
+        def run_with_timeout(func, timeout_seconds):
+            result = [None]
+            exception = [None]
+            
+            def target():
+                try:
+                    result[0] = func()
+                except Exception as e:
+                    exception[0] = e
+            
+            thread = threading.Thread(target=target)
+            thread.daemon = True
+            thread.start()
+            thread.join(timeout_seconds)
+            
+            if thread.is_alive():
+                # Thread is still running, timeout occurred
+                raise TimeoutError("Analysis timed out")
+            
+            if exception[0]:
+                raise exception[0]
+            
+            return result[0]
 
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
 
         try:
             logger.info("Starting analysis...")
-            summarize_company_from_site(url)
+            
+            def analysis_func():
+                summarize_company_from_site(url)
+                return True
+            
+            run_with_timeout(analysis_func, ANALYSIS_TIMEOUT)
             logger.info("Analysis completed successfully")
+            
         except TimeoutError:
             logger.error("Analysis timed out")
             return jsonify({'error': 'Analysis timed out. The website might be too large or slow to analyze.'}), 408
@@ -99,7 +123,6 @@ def analyze_stream():
             return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
         finally:
             sys.stdout = old_stdout
-            signal.alarm(0)  # Cancel timeout
 
         output = mystdout.getvalue()
         logger.info(f"Analysis output length: {len(output)} characters")
@@ -119,7 +142,5 @@ if __name__ == '__main__':
         debug=False,  # Disable debug in production
         host='0.0.0.0', 
         port=5000,
-        threaded=True,  # Enable threading for concurrent requests
-        # Add timeout settings for production
-        request_timeout=REQUEST_TIMEOUT
+        threaded=True  # Enable threading for concurrent requests
     ) 
